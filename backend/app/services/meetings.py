@@ -46,6 +46,10 @@ def active_meeting(db: Session, team_id: str) -> Meeting | None:
     return db.scalar(select(Meeting).where(Meeting.team_id == team_id, Meeting.ended_at.is_(None)))
 
 
+def fresh(db: Session, meeting_id: str) -> Meeting:
+    return db.scalar(select(Meeting).where(Meeting.id == meeting_id).execution_options(populate_existing=True))
+
+
 def _locked(db: Session, meeting_id: str) -> Meeting:
     mt = db.scalar(
         select(Meeting).where(Meeting.id == meeting_id).with_for_update()

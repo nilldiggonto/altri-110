@@ -7,6 +7,7 @@ from app.api.deps import Db, TeamRead, TeamWrite
 from app.core import time as ct
 from app.core.clock import now
 from app.models import Membership, User
+from app.realtime.events import team_changed
 from app.schemas.core import TeamDetailOut, TeamOut, UserOut
 from app.schemas.work import (
     IssueCreateIn, IssueOut, IssuePatchIn, MakeIssueOut, RocksOut, ScorecardOut, ScoreIn, SolveIn,
@@ -44,11 +45,13 @@ def get_scorecard(ctx: TeamRead, db: Db):
             summary="Set a score (last save wins)")
 def put_score(measurable_id: str, week_start: date, body: ScoreIn, ctx: TeamWrite, db: Db):
     scorecard.set_score(db, ctx.team.id, measurable_id, week_start, body.value, ctx.user, now())
+    team_changed(db, ctx.team.id, "scorecard")
 
 
 @router.delete("/measurables/{measurable_id}/scores/{week_start}", status_code=204, tags=["scorecard"])
 def delete_score(measurable_id: str, week_start: date, ctx: TeamWrite, db: Db):
     scorecard.clear_score(db, ctx.team.id, measurable_id, week_start, now())
+    team_changed(db, ctx.team.id, "scorecard")
 
 
 @router.post("/measurables/{measurable_id}/scores/{week_start}/issue", response_model=MakeIssueOut,
@@ -56,6 +59,8 @@ def delete_score(measurable_id: str, week_start: date, ctx: TeamWrite, db: Db):
 def make_issue(measurable_id: str, week_start: date, ctx: TeamWrite, db: Db, response: Response):
     issue, created = issues.make_it_an_issue(db, ctx.team.id, measurable_id, week_start, ctx.user, now())
     response.status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    if created:
+        team_changed(db, ctx.team.id, "scorecard", "issues")
     return MakeIssueOut(issue=issue, created=created)
 
 
@@ -68,23 +73,30 @@ def list_issues(ctx: TeamRead, db: Db, solved: bool = False):
 
 @router.post("/issues", response_model=IssueOut, status_code=201, tags=["issues"])
 def create_issue(body: IssueCreateIn, ctx: TeamWrite, db: Db):
-    return issues.create_issue(db, ctx.team.id, body.title, body.priority, ctx.user, now())
+    out = issues.create_issue(db, ctx.team.id, body.title, body.priority, ctx.user, now())
+    team_changed(db, ctx.team.id, "issues")
+    return out
 
 
 @router.patch("/issues/{issue_id}", response_model=IssueOut, tags=["issues"], summary="Set or clear priority")
 def patch_issue(issue_id: str, body: IssuePatchIn, ctx: TeamWrite, db: Db):
-    return issues.set_priority(db, ctx.team.id, issue_id, body.priority)
+    out = issues.set_priority(db, ctx.team.id, issue_id, body.priority)
+    team_changed(db, ctx.team.id, "issues")
+    return out
 
 
 @router.post("/issues/{issue_id}/solve", response_model=IssueOut, tags=["issues"])
 def solve_issue(issue_id: str, body: SolveIn, ctx: TeamWrite, db: Db):
-    return issues.solve_issue(db, ctx.team.id, issue_id, body.note, now())
+    out = issues.solve_issue(db, ctx.team.id, issue_id, body.note, now())
+    team_changed(db, ctx.team.id, "issues", "scorecard")
+    return out
 
 
 @router.post("/issues/{issue_id}/todos", response_model=TodoOut, status_code=201, tags=["issues"],
              summary="Add a follow-up To-Do, due in 7 days")
 def add_todo(issue_id: str, body: TodoCreateIn, ctx: TeamWrite, db: Db):
     t = issues.add_todo(db, ctx.team.id, issue_id, body.title, body.owner_id, now())
+    team_changed(db, ctx.team.id, "todos")
     return todos.todo_out(t, {}, now())
 
 
@@ -96,7 +108,9 @@ def list_todos(ctx: TeamRead, db: Db):
 
 @router.patch("/todos/{todo_id}", response_model=TodoOut, tags=["todos"], summary="Mark done or undo")
 def patch_todo(todo_id: str, body: TodoPatchIn, ctx: TeamWrite, db: Db):
-    return todos.set_done(db, ctx.team.id, todo_id, body.done, now())
+    out = todos.set_done(db, ctx.team.id, todo_id, body.done, now())
+    team_changed(db, ctx.team.id, "todos")
+    return out
 
 
 # Rocks
