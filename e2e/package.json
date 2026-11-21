@@ -1,0 +1,6 @@
+{
+  "name": "altri-e2e",
+  "private": true,
+  "scripts": { "test": "playwright test" },
+  "devDependencies": { "@playwright/test": "latest" }
+}

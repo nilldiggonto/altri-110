@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: altri
+      POSTGRES_PASSWORD: altri
+      POSTGRES_DB: altri
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U altri"]
+      interval: 2s
+      retries: 20
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://altri:altri@db:5432/altri
+      APP_NOW: ${APP_NOW:-2026-11-11T15:00:00Z}
+      SEED_PATH: /data/seed.json
+    volumes: ["./data:/data:ro"]
+    ports: ["8000:8000"]
+    depends_on:
+      db: { condition: service_healthy }
+  frontend:
+    build: ./frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports: ["3000:3000"]
+    depends_on: [backend]

@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+node_modules/
+.next/
+e2e/test-results/
+e2e/playwright-report/
+PROJECT-README.md
+REGRESSION.md
