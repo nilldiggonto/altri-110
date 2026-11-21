@@ -1,17 +1,34 @@
 "use client"
-import { EyeIcon } from "lucide-react"
+import { ArrowRightIcon, EyeIcon } from "lucide-react"
+import Link from "next/link"
 
+import { SECTION_LABEL } from "@/components/meeting/agenda"
 import { useTeamCtx } from "@/components/shell/team-context"
 import { IssuesSection } from "@/components/team/issues"
 import { RocksSection } from "@/components/team/rocks"
 import { ScorecardSection } from "@/components/team/scorecard"
 import { TodosSection } from "@/components/team/todos"
+import { buttonVariants } from "@/components/ui/button"
+import { useActiveMeeting } from "@/lib/meeting"
 import { formatDay } from "@/lib/time"
 
 export function TeamPage() {
   const { teamId, detail, canWrite } = useTeamCtx()
+  const meeting = useActiveMeeting(teamId).data
+  const running = meeting && !meeting.ended_at
   return (
     <div className="space-y-6">
+      {running && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-accent px-5 py-3">
+          <p className="flex items-center gap-2 text-sm text-accent-foreground">
+            <span className="size-2 animate-pulse rounded-full bg-danger" aria-hidden="true" />
+            <span><span className="font-semibold">Level 10 Meeting in progress</span> · {SECTION_LABEL[meeting.current_section]}</span>
+          </p>
+          <Link href={`/teams/${teamId}/meeting`} className={buttonVariants()}>
+            Go to meeting <ArrowRightIcon />
+          </Link>
+        </div>
+      )}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-primary">Week of {formatDay(detail.current_week)}</p>
