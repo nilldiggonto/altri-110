@@ -6,6 +6,7 @@ import { useEffect, type ReactNode } from "react"
 
 import { ROLE_LABEL } from "@/components/shell/login-picker"
 import { TeamContext } from "@/components/shell/team-context"
+import { Avatar } from "@/components/team/section"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
@@ -55,7 +56,7 @@ export function TeamShell({ children }: { children: ReactNode }) {
   return (
     <>
       <Header teamId={teamId} me={me.data} teamName={team.data?.team.name} />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">{body}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">{body}</main>
     </>
   )
 }
@@ -68,12 +69,15 @@ function Header({ teamId, me, teamName }: { teamId: string; me?: Me; teamName?: 
     { href: `${base}/meeting`, label: "Meeting" },
   ]
   return (
-    <header className="border-b">
-      <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-4 px-4">
-        <Link href="/" className="font-semibold tracking-tight">altri</Link>
+    <header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur supports-backdrop-filter:bg-card/70">
+      <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-4 sm:gap-4">
+        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+          <span aria-hidden="true" className="flex size-7 items-center justify-center rounded-lg bg-primary text-sm text-primary-foreground">a</span>
+          <span className="hidden sm:inline">altri</span>
+        </Link>
         <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="ghost" className="gap-1 font-medium" />} disabled={!me}>
-            {teamName ?? "Teams"}
+          <DropdownMenuTrigger render={<Button variant="ghost" className="min-w-0 gap-1 px-1.5 font-medium sm:px-2.5" />} disabled={!me}>
+            <span className="max-w-28 truncate sm:max-w-48">{teamName ?? "Teams"}</span>
             <ChevronDownIcon />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="min-w-48">
@@ -93,7 +97,7 @@ function Header({ teamId, me, teamName }: { teamId: string; me?: Me; teamName?: 
               key={t.href}
               href={t.href}
               aria-current={pathname === t.href ? "page" : undefined}
-              className="rounded-md px-3 py-1.5 text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
+              className="rounded-md px-2.5 py-1.5 text-sm sm:px-3 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-[current=page]:bg-muted aria-[current=page]:text-foreground"
             >
               {t.label}
             </Link>
@@ -102,15 +106,20 @@ function Header({ teamId, me, teamName }: { teamId: string; me?: Me; teamName?: 
         <div className="ml-auto">
           {me && (
             <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="ghost" className="gap-1" />}>
-                {me.user.name}
-                <span className="text-muted-foreground">({ROLE_LABEL[me.user.role]})</span>
+              <DropdownMenuTrigger render={<Button variant="ghost" className="gap-1 px-1 sm:px-2.5" />}>
+                <Avatar name={me.user.name} className="size-7" />
+                <span className="hidden md:inline">{me.user.name}</span>
+                <span className="hidden text-muted-foreground md:inline">({ROLE_LABEL[me.user.role]})</span>
+                <span className="sr-only md:hidden">{me.user.name}, {ROLE_LABEL[me.user.role]}</span>
                 <ChevronDownIcon />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={signOut}>
-                  <LogOutIcon /> Sign out
-                </DropdownMenuItem>
+              <DropdownMenuContent align="end" className="min-w-52">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>{me.user.name} · {ROLE_LABEL[me.user.role]}</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={signOut}>
+                    <LogOutIcon /> Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
           )}

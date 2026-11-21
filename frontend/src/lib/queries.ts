@@ -1,10 +1,11 @@
 "use client"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSyncExternalStore } from "react"
+import { toast } from "sonner"
 
 import { api } from "@/lib/api"
 import { getToken, subscribeToken } from "@/lib/token"
-import type { Me, TeamDetail, User } from "@/lib/types"
+import type { Issue, Me, Rocks, Scorecard, TeamDetail, TodoList, User } from "@/lib/types"
 
 export const keys = {
   me: ["me"] as const,
@@ -39,5 +40,44 @@ export function useUserNames(): (id: string) => string {
 }
 
 export function useTeam(teamId: string) {
-  return useQuery({ queryKey: keys.team(teamId).concat("detail"), queryFn: () => api<TeamDetail>(`/teams/${teamId}`) })
+  return useQuery({ queryKey: [...keys.team(teamId), "detail"], queryFn: () => api<TeamDetail>(`/teams/${teamId}`) })
+}
+
+export function useScorecard(teamId: string) {
+  return useQuery({ queryKey: keys.section(teamId, "scorecard"), queryFn: () => api<Scorecard>(`/teams/${teamId}/scorecard`) })
+}
+
+export function useIssues(teamId: string, solved = false) {
+  return useQuery({
+    queryKey: [...keys.section(teamId, "issues"), solved ? "solved" : "open"],
+    queryFn: () => api<Issue[]>(`/teams/${teamId}/issues${solved ? "?solved=true" : ""}`),
+  })
+}
+
+export function useTodos(teamId: string) {
+  return useQuery({ queryKey: keys.section(teamId, "todos"), queryFn: () => api<TodoList>(`/teams/${teamId}/todos`) })
+}
+
+export function useRocks(teamId: string) {
+  return useQuery({ queryKey: keys.section(teamId, "rocks"), queryFn: () => api<Rocks>(`/teams/${teamId}/rocks`) })
+}
+
+/** Mutation that refreshes the given team sections and toasts errors. */
+export function useTeamMutation<V, R = unknown>(
+  teamId: string,
+  sections: string[],
+  fn: (vars: V) => Promise<R>,
+  opts: { success?: string } = {},
+) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      if (opts.success) toast.success(opts.success)
+    },
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "Something went wrong")
+    },
+    onSettled: () => Promise.all(sections.map((s) => qc.invalidateQueries({ queryKey: keys.section(teamId, s) }))),
+  })
 }
