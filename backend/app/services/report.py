@@ -35,23 +35,30 @@ def _measurable_statuses(db: Session, team_id: str, weeks: list[date], current_w
     }
 
 
-def _meeting_summary(db: Session, mt: Meeting) -> dict[str, Any]:
-    week = ct.week_of(mt.started_at) - timedelta(weeks=1)  # last closed week at meeting time
-    window = (mt.started_at, mt.ended_at)
+def meeting_work(db: Session, mt: Meeting, until: datetime) -> tuple[list[str], list[str]]:
+    """Issues solved and To-Dos created in the team during [started_at, until]."""
+    window = (mt.started_at, until)
     solved = db.scalars(
         select(Issue.id).where(Issue.team_id == mt.team_id, Issue.solved_at.between(*window))
     ).all()
     created = db.scalars(
         select(Todo.id).where(Todo.team_id == mt.team_id, Todo.created_at.between(*window))
     ).all()
+    return sorted(solved), sorted(created)
+
+
+def meeting_summary(db: Session, mt: Meeting) -> dict[str, Any]:
+    """Summary of an ended meeting."""
+    week = ct.week_of(mt.started_at) - timedelta(weeks=1)  # last closed week at meeting time
+    solved, created = meeting_work(db, mt, mt.ended_at)
     attendees = db.scalars(select(MeetingAttendee.user_id).where(MeetingAttendee.meeting_id == mt.id)).all()
     ratings = db.scalars(select(MeetingRating.rating).where(MeetingRating.meeting_id == mt.id)).all()
     status = _measurable_statuses(db, mt.team_id, [week], ct.week_of(mt.started_at))
     return {
         "scorecard_week": week.isoformat(),
         "measurable_status": {mid: s[week.isoformat()] for mid, s in status.items()},
-        "issues_solved": sorted(solved),
-        "todos_created": sorted(created),
+        "issues_solved": solved,
+        "todos_created": created,
         "attendee_ids": sorted(attendees),
         "rating": meeting_rating(ratings),
     }
@@ -92,7 +99,7 @@ def team_report(db: Session, team_id: str, now: datetime) -> dict[str, Any]:
             for r in rocks
         },
         "issue_order": [i.id for i in issue_order(unsolved)],
-        "meetings": {mt.id: _meeting_summary(db, mt) for mt in meetings},
+        "meetings": {mt.id: meeting_summary(db, mt) for mt in meetings},
     }
 
 

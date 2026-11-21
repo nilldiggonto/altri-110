@@ -23,6 +23,11 @@ class Clock:
     def set(self, anchor: datetime, running: bool = False) -> None:
         self._anchor, self._running, self._t0 = anchor, running, time.monotonic()
 
+    def resume_after(self, latest: datetime | None) -> None:
+        """After a restart, never run behind what is already persisted (meeting timers, write order)."""
+        if self._running and latest and latest > self.now():
+            self.set(latest, self._running)
+
     def advance(self, seconds: float) -> None:
         self._anchor += timedelta(seconds=seconds)
 

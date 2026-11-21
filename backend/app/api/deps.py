@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import verify_token
 from app.db.session import get_db
-from app.models import Membership, Team, User
+from app.models import Meeting, Membership, Team, User
 
 WRITE_ROLES = {"admin", "team_member"}
 
@@ -63,3 +63,20 @@ def team_writer(ctx: Annotated[TeamCtx, Depends(team_reader)]) -> TeamCtx:
 
 TeamRead = Annotated[TeamCtx, Depends(team_reader)]
 TeamWrite = Annotated[TeamCtx, Depends(team_writer)]
+
+
+@dataclass(frozen=True)
+class MeetingCtx:
+    meeting: Meeting
+    user: User
+
+
+def meeting_reader(db: Db, user: CurrentUser, meeting_id: Annotated[str, Path(max_length=64)]) -> MeetingCtx:
+    """Anyone who can read the meeting's team. Same 403 for a missing meeting."""
+    mt = db.get(Meeting, meeting_id)
+    if not mt or not can_read_team(db, user, mt.team_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "No access to this meeting")
+    return MeetingCtx(mt, user)
+
+
+MeetingRead = Annotated[MeetingCtx, Depends(meeting_reader)]
