@@ -11,12 +11,16 @@ from app.db.session import SessionLocal
 from app.services.report import rules_report
 
 
+def render(db, at) -> str:
+    return json.dumps(rules_report(db, at), indent=2) + "\n"
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--out", type=Path, help="also write the JSON to this file")
     args = p.parse_args()
     with SessionLocal() as db:
-        out = json.dumps(rules_report(db, now()), indent=2) + "\n"
+        out = render(db, now())
     print(out, end="")
     if args.out:
         args.out.write_text(out)
