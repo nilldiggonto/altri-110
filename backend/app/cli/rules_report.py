@@ -6,7 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
-from app.core.clock import now
+from app.core.clock import app_now as now
 from app.db.session import SessionLocal
 from app.services.report import rules_report
 
