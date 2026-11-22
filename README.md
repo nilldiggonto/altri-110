@@ -11,6 +11,7 @@ A Team page (Scorecard, Issues, To-Dos, Rocks) and a real-time Level 10 Meeting 
 docker compose up --build
 ```
 - Open http://localhost:3000. The API runs on http://localhost:8000, with docs at http://localhost:8000/docs.
+- If ports 8000 or 3000 are taken, pick others: `API_PORT=8030 WEB_PORT=3030 docker compose up --build`.
 - On start, the backend runs migrations and loads `data/seed.json`. The loader only inserts missing rows, so restarts keep your data and rerunning it is safe.
 - To start from a clean seed: `docker compose exec backend python -m app.seed.load --reset`.
 - Sign in by picking a seeded user. Blake Brooks (Team Member) or Avery Admin can run a meeting; Ellis Evans is an Observer.

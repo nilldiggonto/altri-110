@@ -1,3 +1,4 @@
+# Host ports: API_PORT (default 8000) and WEB_PORT (default 3000), e.g. API_PORT=8030 WEB_PORT=3030 docker compose up
 services:
   db:
     image: postgres:16
@@ -5,7 +6,7 @@ services:
       POSTGRES_USER: altri
       POSTGRES_PASSWORD: altri
       POSTGRES_DB: altri
-    ports: ["5432:5432"]
+    # No host port: only the backend talks to Postgres, over the compose network.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U altri"]
       interval: 2s
@@ -16,14 +17,15 @@ services:
       DATABASE_URL: postgresql+psycopg://altri:altri@db:5432/altri
       APP_NOW: ${APP_NOW:-2026-11-11T15:00:00Z}
       SEED_PATH: /data/seed.json
+      CORS_ORIGINS: '["http://localhost:${WEB_PORT:-3000}"]'
     volumes: ["./data:/data:ro"]
-    ports: ["8000:8000"]
+    ports: ["${API_PORT:-8000}:8000"]
     depends_on:
       db: { condition: service_healthy }
   frontend:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
-    ports: ["3000:3000"]
+        NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-8000}
+    ports: ["${WEB_PORT:-3000}:3000"]
     depends_on: [backend]
