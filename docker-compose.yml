@@ -12,20 +12,61 @@ services:
       interval: 2s
       retries: 20
   backend:
-    build: ./backend
+    build: { context: ./backend, target: runtime }
     environment:
       DATABASE_URL: postgresql+psycopg://altri:altri@db:5432/altri
       APP_NOW: ${APP_NOW:-2026-11-11T15:00:00Z}
       SEED_PATH: /data/seed.json
-      CORS_ORIGINS: '["http://localhost:${WEB_PORT:-3000}"]'
+      # Same port inside and outside, so the API URL baked into the frontend works in both.
+      PORT: ${API_PORT:-8000}
+      # frontend:3000 is the origin the e2e browser uses inside the compose network.
+      CORS_ORIGINS: '["http://localhost:${WEB_PORT:-3000}", "http://frontend:3000"]'
     volumes: ["./data:/data:ro"]
-    ports: ["${API_PORT:-8000}:8000"]
+    ports: ["${API_PORT:-8000}:${API_PORT:-8000}"]
     depends_on:
       db: { condition: service_healthy }
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request as u; u.urlopen('http://localhost:$${PORT}/health')"
+      interval: 2s
+      retries: 30
   frontend:
     build:
       context: ./frontend
       args:
         NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-8000}
     ports: ["${WEB_PORT:-3000}:3000"]
-    depends_on: [backend]
+    depends_on:
+      backend: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/login').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 2s
+      retries: 30
+
+  # Tests: make test-docker. Not started by docker compose up.
+  backend-test:
+    profiles: ["test"]
+    build: { context: ./backend, target: test }
+    working_dir: /repo/backend
+    volumes: [".:/repo"]
+    environment:
+      TEST_DATABASE_URL: postgresql+psycopg://altri:altri@db:5432/altri_test
+      SEED_PATH: /repo/data/seed.json
+    command: ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider"]
+    depends_on:
+      db: { condition: service_healthy }
+
+  e2e:
+    profiles: ["test"]
+    image: mcr.microsoft.com/playwright:v1.58.2-noble
+    # Shares the backend's network: the browser opens frontend:3000 and reaches the API at
+    # localhost:$API_PORT, the URL baked into the frontend build.
+    network_mode: "service:backend"
+    working_dir: /e2e
+    volumes: ["./e2e:/e2e", "/e2e/node_modules"]
+    environment:
+      E2E_BASE_URL: http://frontend:3000
+    command: ["sh", "-c", "npm ci --silent && npx playwright test"]
+    depends_on:
+      frontend: { condition: service_healthy }

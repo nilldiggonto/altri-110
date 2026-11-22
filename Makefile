@@ -1,4 +1,4 @@
-.PHONY: api up test test-backend e2e e2e-failure-artifact rules-report rules-report-docker
+.PHONY: api up test test-backend test-docker e2e e2e-failure-artifact rules-report rules-report-docker
 # Local dev API on :8000 (docs at /docs)
 api:
 	cd backend && .venv/bin/alembic upgrade head && .venv/bin/python -m app.seed.load && .venv/bin/uvicorn app.main:app --reload --port 8000
@@ -10,6 +10,14 @@ test-backend:
 	cd backend && .venv/bin/pytest -q
 
 test: test-backend e2e
+
+# Same suite in Docker, nothing installed locally. Ports: make test-docker API_PORT=8030 WEB_PORT=3030
+test-docker:
+	docker compose --profile test build
+	docker compose up -d --wait db backend frontend
+	docker compose run --rm backend-test
+	docker compose exec backend python -m app.seed.load --reset
+	docker compose run --rm e2e
 # Fresh seed, then print the report. Override the date: make rules-report APP_NOW=2026-11-16T06:00:00Z
 rules-report:
 	@cd backend && .venv/bin/python -m app.seed.load --reset >/dev/null && APP_NOW=$(or $(APP_NOW),2026-11-11T15:00:00Z) .venv/bin/python -m app.cli.rules_report

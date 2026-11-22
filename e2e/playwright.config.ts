@@ -5,7 +5,9 @@ const API_PORT = process.env.E2E_API_PORT ?? "8020"
 const WEB_PORT = process.env.E2E_WEB_PORT ?? "3020"
 const DATABASE_URL = process.env.E2E_DATABASE_URL ?? "postgresql+psycopg://altri:altri@localhost:5432/altri_e2e"
 const PY = process.env.E2E_PYTHON ?? ".venv/bin/python"
-export const WEB_URL = `http://localhost:${WEB_PORT}`
+// E2E_BASE_URL: test a stack that is already running (the compose e2e service); start no servers.
+const EXTERNAL = process.env.E2E_BASE_URL
+export const WEB_URL = EXTERNAL ?? `http://localhost:${WEB_PORT}`
 
 export default defineConfig({
   testDir: "tests",
@@ -20,7 +22,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
     ...devices["Desktop Chrome"],
   },
-  webServer: [
+  webServer: EXTERNAL ? [] : [
     {
       // Fresh seed on every run; real (running) clock from APP_NOW so the meeting timer moves.
       command: [

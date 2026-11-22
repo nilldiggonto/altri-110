@@ -40,8 +40,10 @@ make rules-report-docker                     # the same, inside the compose stac
 make test           # backend tests, then the Playwright e2e test (all unattended)
 make test-backend   # rules, API authorization, concurrency only
 make e2e            # Playwright only
+make test-docker    # the same suite in Docker, nothing installed locally
 ```
-These run locally: they need the Postgres, venv and Node setup from Local development, plus `npx playwright install chromium` once.
+- `make test` runs locally. It needs the Postgres, venv and Node setup from Local development, plus `npx playwright install chromium` once.
+- `make test-docker` builds the images, starts the stack, runs pytest in a `backend-test` container, reseeds, then runs Playwright in the official Playwright image against the compose frontend. It accepts the same `API_PORT=.. WEB_PORT=..` overrides.
 
 | Layer | Where | What |
 |---|---|---|
@@ -76,7 +78,6 @@ These run locally: they need the Postgres, venv and Node setup from Local develo
 - The real-time hub is in-process, so there is one API instance; scaling out needs Postgres LISTEN/NOTIFY or Redis (see DECISIONS).
 - Sign-in is a seeded user picker with a signed bearer token. There are no sessions, expiry or logout on the server, and the WebSocket token appears in the URL.
 - Past meeting summaries are recomputed from live data, not snapshotted (the design is in DECISIONS 5).
-- `make test` runs locally; there is no compose test service yet.
 - Desktop and mobile widths were checked by hand in Chromium only.
 
 ## AI tools used
