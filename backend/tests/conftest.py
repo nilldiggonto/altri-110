@@ -13,29 +13,20 @@ os.environ.setdefault("SECRET_KEY", "test-secret")
 
 import json  # noqa: E402
 
-import psycopg  # noqa: E402
 import pytest  # noqa: E402
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
-from sqlalchemy.engine import make_url  # noqa: E402
 
 from app.core.clock import clock, parse_utc  # noqa: E402
 from app.core.config import ROOT, settings  # noqa: E402
+from app.db.ensure import ensure_database  # noqa: E402
 
 APP_NOW = parse_utc(settings.app_now)
 
 
-def _ensure_database(url: str) -> None:
-    u = make_url(url)
-    admin = u.set(database="postgres", drivername="postgresql")
-    with psycopg.connect(admin.render_as_string(hide_password=False), autocommit=True) as conn:
-        if not conn.execute("SELECT 1 FROM pg_database WHERE datname = %s", (u.database,)).fetchone():
-            conn.execute(f'CREATE DATABASE "{u.database}"')
-
-
 @pytest.fixture(scope="session")
 def migrated() -> None:
-    _ensure_database(settings.database_url)
+    ensure_database(settings.database_url)
     cfg = Config(str(ROOT / "backend" / "alembic.ini"))
     cfg.set_main_option("script_location", str(ROOT / "backend" / "alembic"))
     command.upgrade(cfg, "head")

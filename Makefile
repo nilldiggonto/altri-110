@@ -1,4 +1,4 @@
-.PHONY: api up test test-backend rules-report rules-report-docker e2e
+.PHONY: api up test test-backend e2e e2e-failure-artifact rules-report rules-report-docker
 # Local dev API on :8000 (docs at /docs)
 api:
 	cd backend && .venv/bin/alembic upgrade head && .venv/bin/python -m app.seed.load && .venv/bin/uvicorn app.main:app --reload --port 8000
@@ -9,7 +9,7 @@ up:
 test-backend:
 	cd backend && .venv/bin/pytest -q
 
-test: test-backend
+test: test-backend e2e
 # Fresh seed, then print the report. Override the date: make rules-report APP_NOW=2026-11-16T06:00:00Z
 rules-report:
 	@cd backend && .venv/bin/python -m app.seed.load --reset >/dev/null && APP_NOW=$(or $(APP_NOW),2026-11-11T15:00:00Z) .venv/bin/python -m app.cli.rules_report
@@ -17,5 +17,11 @@ rules-report:
 # Same, inside the running compose stack
 rules-report-docker:
 	@docker compose exec backend sh -c "python -m app.seed.load --reset >/dev/null && APP_NOW=$(or $(APP_NOW),2026-11-11T15:00:00Z) python -m app.cli.rules_report"
+# Playwright, two browsers: own ports (8020/3020) and database (altri_e2e), fresh seed, real clock
 e2e:
-	@echo "TODO"
+	cd e2e && npm ci --silent && npx playwright test
+
+# Failure artifact: force a wrong expectation, keep the trace (view: npx playwright show-trace <zip>)
+e2e-failure-artifact:
+	cd e2e && E2E_FORCE_FAIL=1 npx playwright test || true
+	mkdir -p docs/artifacts && cp e2e/test-results/*/trace.zip docs/artifacts/e2e-failure-trace.zip

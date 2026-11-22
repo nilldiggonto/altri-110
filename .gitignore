@@ -5,6 +5,7 @@ __pycache__/
 .env
 node_modules/
 .next/
+.next-e2e/
 e2e/test-results/
 e2e/playwright-report/
 PROJECT-README.md
