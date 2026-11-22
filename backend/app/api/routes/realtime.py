@@ -35,9 +35,11 @@ async def _send(ws: WebSocket, sub: Subscriber) -> None:
     while True:
         get = asyncio.ensure_future(sub.queue.get())
         over = asyncio.ensure_future(sub.overflow.wait())
-        done, pending = await asyncio.wait({get, over}, return_when=asyncio.FIRST_COMPLETED)
-        for p in pending:
-            p.cancel()
+        try:
+            done, _ = await asyncio.wait({get, over}, return_when=asyncio.FIRST_COMPLETED)
+        finally:  # also when this task is cancelled on disconnect (REGRESSION R3)
+            get.cancel()
+            over.cancel()
         if over in done:
             await ws.close(code=status.WS_1013_TRY_AGAIN_LATER)
             return
@@ -69,6 +71,7 @@ async def team_socket(ws: WebSocket, team_id: str, token: str | None = None):
         done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         for t in pending:
             t.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
         for t in done:
             if t.exception() and not isinstance(t.exception(), WebSocketDisconnect):
                 raise t.exception()
