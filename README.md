@@ -2,7 +2,7 @@
 
 A Team page (Scorecard, Issues, To-Dos, Rocks) and a real-time Level 10 Meeting page for a weekly leadership meeting. Next.js + TypeScript + shadcn/ui + Tailwind, FastAPI, Postgres with Alembic migrations.
 
-- Decision record: [docs/DECISIONS.md](docs/DECISIONS.md)
+- Decision record: [DECISION.md](DECISION.md)
 - Rules report: [rules_report.json](rules_report.json)
 
 ## Run it
@@ -75,9 +75,9 @@ make test-docker    # the same suite in Docker, nothing installed locally
 - **Clock:** the app clock runs from APP_NOW and never reads the system date. After a restart it resumes from the latest stored timestamp.
 
 ## Known limitations
-- The real-time hub is in-process, so there is one API instance; scaling out needs Postgres LISTEN/NOTIFY or Redis (see DECISIONS).
+- The real-time hub is in-process, so there is one API instance; scaling out needs Postgres LISTEN/NOTIFY or Redis (see DECISION.md).
 - Sign-in is a seeded user picker with a signed bearer token. There are no sessions, expiry or logout on the server, and the WebSocket token appears in the URL.
-- Past meeting summaries are recomputed from live data, not snapshotted (the design is in DECISIONS 5).
+- Past meeting summaries are recomputed from live data, not snapshotted (the design is in DECISION.md, section 5).
 - Desktop and mobile widths were checked by hand in Chromium only.
 
 ## AI tools used
